@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="./css/iconfont.css">
     <link rel="stylesheet" href="./css/main.css">
     <script src="./libs/jquery-1.12.4.min.js"></script>
+    <script src="./libs/bootstrap/js/bootstrap.min.js"></script>
+    <script src="./libs/jquery.twbsPagination.js"></script>
     <!-- 引入模板引擎js文件 -->
     <script src="./libs/template-web.js"></script>
 </head>
@@ -69,9 +71,132 @@
                 </tbody>
             </table>
             <div class="row text-center">
+                <ul id="pagination-demo" class="pagination-sm"></ul>
+                <p class="nodata">没有数据</p>
             </div>
         </div>
     </div>
+    <!--定义模板引擎-->
+    <script type="text/html" id="category_list">
+        <option value=''>所有分类</option>
+        {{each data v}}
+            <option value='{{v.id}}'>{{v.name}}</option>
+        {{/each}}
+    </script>
+    <!--定义文章显示模板引擎-->
+    <script type="text/html" id="article_query">
+        {{each data v}}
+        <tr>
+                <td>{{v.title}}</td>
+                <td>{{v.author}}</td>
+                <td>{{v.category}}</td>
+                <td class="text-center">{{v.date}}</td>
+                <td class="text-center">{{v.state}}</td>
+                <td class="text-center">
+                    <a href="article_edit.html?id={{v.id}}" class="btn btn-default btn-xs">编辑</a>
+                    <a href="javascript:void(0);" class="btn btn-danger btn-xs delete" data-id={{v.id}}>删除</a>
+                </td>
+            </tr>
+        {{/each}}
+    </script>
+    <script src="./libs/http.js"></script>
+    <!-- <script src="./js/article_list.js"></script> -->
+    <script>
+        var myPage = 1;//定义一个变量，保存当前是第几页
+        $(function () {
+            //获取数据封装成函数
+            function getData(myPage, callBack) {
+                $.ajax({
+                    type: 'get',
+                    url: BigNew.article_query,
+                    data: {
+                        type: $('#selCategory').val().trim(),
+                        state: $('#selStatus').val().trim(),
+                        page: myPage,
+                        perpage: 3
+                    },
+                    success: function (backData) {
+                        if (backData.code == 200) {
+                            var resHtml = template('article_query', backData.data);
+                            $('tbody').html(resHtml);
+                            if (backData.data.data.length != 0 && callBack != null) {
+                                $('#pagination-demo').show().next().hide();
+                                callBack(backData);
+                            }else if (backData.data.data.length == 0 && myPage == 1){
+                                $('#pagination-demo').hide().next().show();
+                            }else if(backData.data.data.length == 0 && (myPage-1) == backData.data.totalPage){
+                                myPage--;
+                                $('#pagination-demo').twbsPagination('changeTotalPages', backData.data.totalPage, myPage);
+                            }
+                        }
+                    }
+                });
+            }
+
+            //进入页面，获取所有文章类别
+            $.ajax({
+                type: 'get',
+                url: BigNew.category_list,
+                success: function (backData) {
+                    // console.log(backData);
+                    if (backData.code == 200) {
+                        var resHtml = template('category_list', backData);
+                        $('#selCategory').html(resHtml);
+                    }
+                }
+            });
+            //----------------------------------------------------------------------------------------------------------------------------
+            //显示文章
+            getData(1, function (backData) {
+                $('#pagination-demo').twbsPagination({
+                    totalPages: backData.data.totalPage,
+                    visiblePages: 7,
+                    first: '首页',
+                    prev: '上一页',
+                    next: '下一页',
+                    last: '尾页',
+                    onPageClick: function (event, page) {
+                        getData(page, function (backData) {
+                            myPage = page;
+                        });
+                    }
+                });
+            });
+            //----------------------------------------------------------------------------------------------------------------------------
+            //点击筛选按钮，重新发送请求获取文章
+            $('#btnSearch').on('click', function (e) {
+                e.preventDefault();
+                getData(1, function (backData) {
+                    $('#pagination-demo').twbsPagination('changeTotalPages', backData.data.totalPage, 1);
+                });
+
+            });
+            //----------------------------------------------------------------------------------------------------------------------------
+            //点击删除按钮，删除文章
+            $('tbody').on('click', '.delete', function () {
+                if (confirm('数据删除后不可恢复！')) {
+                    $.ajax({
+                        type: 'post',
+                        url: BigNew.article_delete,
+                        data: {
+                            id: this.getAttribute('data-id')
+                        },
+                        success: function (backData) {
+                            // console.log(backData);
+                            if (backData.code == 204) {
+                                // window.location.reload(); //用这种方法刷新效果不好，会返回第一页的数据
+                                //解决发送ajax请求，获取当前页的数据
+                                getData(myPage, function (backData) {
+                                    $('#pagination-demo').twbsPagination('changeTotalPages', backData.data.totalPage, myPage);
+                                });
+                            }
+                        }
+                    });
+                }
+
+            });
+        })
+    </script>
 </body>
 
 </html>

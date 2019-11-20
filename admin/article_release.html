@@ -12,6 +12,12 @@
     <link rel="stylesheet" href="css/main.css">
     <!-- jq -->
     <script src="./libs/jquery-1.12.4.min.js"></script>
+    <!--引入jeDate-->
+    <link rel="stylesheet" href="./libs/jedate/css/jeDate-test.css">
+    <link rel="stylesheet" href="./libs/jedate/css/jedate.css">
+    <script src="./libs/jedate/js/jedate.js"></script>
+    <!--引入王编辑器-->
+    <script src="./libs/wangEditor.min.js"></script>
     <!-- 模板引擎 -->
     <script src="./libs/template-web.js"></script>
 </head>
@@ -19,13 +25,13 @@
 <body>
     <div class="container-fluid">
         <div class="common_title">
-            文章编辑
+            发布文章
         </div>
         <div class="container-fluid common_con">
             <form class="form-horizontal article_form" id="form">
                 <div class="form-group">
                     <label for="inputTitle" class="col-sm-2 control-label">文章标题：</label>
-                    <div class="col-sm-10">
+                    <div class="col-sm-8">
                         <input type="text" name="title" class="form-control title" id="inputTitle" value="文章标题文字">
                     </div>
                 </div>
@@ -38,7 +44,7 @@
                 </div>
                 <div class="form-group">
                     <label for="inputCategory" class="col-sm-2 control-label">文章类别：</label>
-                    <div class="col-sm-4">
+                    <div class="col-sm-3">
                         <select class="form-control category" name="categoryId">
                             <option>类别一</option>
                             <option>类别二</option>
@@ -50,12 +56,17 @@
                 </div>
                 <div class="form-group">
                     <label class="col-sm-2 control-label">发布时间：</label>
-                    <div class="col-sm-4">
+                    <div class="jeinpbox col-sm-4">
+                        <input type="text" class="jeinput" id="testico" placeholder="YYYY-MM-DD">
+                        <div class="icons jebtns"
+                            onclick="jeDate('#testico',{trigger:false,format: 'YYYY-MM-DD' ,zIndex: 99999})">
+                        </div>
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="inputEmail3" class="col-sm-2 control-label">文章内容：</label>
-                    <div class="col-sm-10">
+                    <div id="editor" class="col-sm-8">
+                        <p>输入内容...</p>
                     </div>
                 </div>
                 <div class="form-group">
@@ -67,6 +78,101 @@
             </form>
         </div>
     </div>
+
+    <!--定义文章类别的模板引擎-->
+    <script type="text/html" id="category_list">
+        {{each data v}}
+        <option value='{{v.id}}'>{{v.name}}</option>
+        {{/each}}
+    </script>
+
+    <script src="./libs/http.js"></script>
+    <script>
+        $(function () {
+            //页面结构准备
+            //1.日期结构
+            jeDate("#testico", {
+                zIndex: 99999,
+                //初始化当前系统时间
+                isinitVal: true,
+                //红色主题
+                // theme:{bgcolor:"#D91600",pnColor:"#FF6653"},
+                format: "YYYY-MM-DD",
+                isTime: true,
+                minDate: "2014-09-19 00:00:00",
+                //donefun:function(obj) {},点击确定后的回调,obj包含{ elem当前输入框ID, val当前选择的值, date当前的日期值}
+                // donefun: function (obj) {
+                //     console.log(obj);
+                // },
+
+            });
+            // 2.富文本编辑器
+            var E = window.wangEditor;
+            var editor = new E('#editor');
+            editor.create();
+            //进入页面，先获取文章类别
+            $.ajax({
+                type: 'get',
+                async: false,
+                url: BigNew.category_list,
+                success: function (backData) {
+                    // console.log(backData);
+                    if (backData.code == 200) {
+                        var resHtml = template('category_list', backData);
+                        $('select.category').html(resHtml);
+                    }
+                }
+            });
+            //图片预览功能
+            $('#inputCover').on('change', function () {
+                var imgFile = this.files[0];
+                var url = URL.createObjectURL(imgFile);
+                $(this).prev().attr('src', url);
+            })
+            //发送ajax请求，发布文章
+            //发布
+            $('.btn-release').on('click', function (e) {
+                e.preventDefault();
+                articlePublish(false);
+            });
+            //存为草稿
+            $('.btn-draft').on('click', function (e) {
+                e.preventDefault();
+                articlePublish(true);
+            });
+
+            //发布文章/存为草稿  封装成函数
+            //isCaoGao:boolen类型，是否存为草稿 
+            function articlePublish(isCaoGao) {
+                var fd = new FormData($('#form')[0]);
+                fd.append('date', $('#testico').val());
+                fd.append('content', editor.txt.html());
+                if(!isCaoGao){
+                    fd.append('state','已发布');
+                }
+                $.ajax({
+                    type:'post',
+                    url:BigNew.article_publish,
+                    data:fd,
+                    contentType:false,
+                    processData:false,
+                    success:function(backData){
+                        if(backData.code == 200){
+                            if(isCaoGao){
+                                alert('存为草稿成功');
+                            }else{
+                                alert('发布成功');
+                            }
+                            window.history.back();
+                        }
+                    }
+                });
+            }
+
+        });
+
+
+    </script>
 </body>
 
 </html>
