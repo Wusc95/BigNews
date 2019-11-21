@@ -145,7 +145,7 @@
             //isCaoGao:boolen类型，是否存为草稿 
             function articlePublish(isCaoGao) {
                 var fd = new FormData($('#form')[0]);
-                fd.append('date', $('#testico').val());
+                fd.append('date', $('#testico').val().trim());
                 fd.append('content', editor.txt.html());
                 if(!isCaoGao){
                     fd.append('state','已发布');

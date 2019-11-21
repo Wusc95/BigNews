@@ -209,6 +209,20 @@
     <script src="./js/template-web.js"></script>
     <script src="./js/jquery-1.12.4.min.js"></script>
 
+
+    <script>
+        $(function(){
+            //进入页面，获取根据id查找到的文章
+            $.ajax({
+                type:'get',
+                url:'http://localhost:8080/api/v1/index/article',
+                success:function(backData){
+                    console.log(backData);
+                }
+            });
+        });
+    </script>
+
 </body>
 
 </html>
